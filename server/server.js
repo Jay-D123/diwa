@@ -1,3 +1,4 @@
+const notesRoutes = require('./routes/notes');
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -8,6 +9,7 @@ const pool = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
 
 app.use(cors({
     origin: 'http://localhost:5173',
@@ -62,6 +64,8 @@ app.get('/auth/me', (req, res) => {
         res.json({ loggedIn: false });
     }
 });
+
+app.use('/api/notes', notesRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
