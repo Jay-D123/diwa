@@ -1,7 +1,8 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../api';
 import NoteChecklist from '../components/NoteChecklist';
 import DOMPurify from 'dompurify';
+import NoteModal from '../components/NoteModal';
+import { apiFetch, linkify } from '../api';
 
 const COLOR_OPTIONS = [
     { key: 'default', className: 'bg-diwa-card border border-white/30' },
@@ -9,7 +10,7 @@ const COLOR_OPTIONS = [
     { key: 'indigo', className: 'bg-diwa-indigo' },
 ];
 
-export default function Notes() {
+export default function Notes({ search }) {
     const [notes, setNotes] = useState([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -25,6 +26,7 @@ export default function Notes() {
     const [notePinned, setNotePinned] = useState(false);
     const [page, setPage] = useState(1);
     const PER_PAGE = 8;
+    const [viewingNote, setViewingNote] = useState(null);
 
     useEffect(() => {
         loadNotes();
@@ -47,7 +49,7 @@ export default function Notes() {
     }
 
     async function saveNote(archive = false) {
-        const finalContent = contentRef.current ? DOMPurify.sanitize(contentRef.current.innerHTML) : '';
+        const finalContent = contentRef.current ? linkify(DOMPurify.sanitize(contentRef.current.innerHTML)) : '';
         if (!title && !finalContent && checklistItems.length === 0) return;
         const note = await apiFetch('/api/notes', {
             method: 'POST',
@@ -132,14 +134,17 @@ export default function Notes() {
         return 'bg-diwa-card border-white/5';
     };
 
-    const visibleNotes = notes.filter((n) => !n.is_archived);
+    const visibleNotes = notes
+        .filter((n) => !n.is_archived)
+        .filter((n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase()));
     const pinned = visibleNotes.filter((n) => n.is_pinned);
     const othersAll = visibleNotes.filter((n) => !n.is_pinned);
     const totalPages = Math.max(1, Math.ceil(othersAll.length / PER_PAGE));
     const others = othersAll.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
     return (
-        <main className="max-w-3xl mx-auto px-6 py-10">
+        <>
+            <main className="max-w-3xl mx-auto px-6 py-10">
             <div className={`relative border rounded-xl px-4 py-3 mb-10 shadow-lg transition-colors ${cardColor(color)}`}>
 
                 {expanded && (
@@ -176,17 +181,22 @@ export default function Notes() {
                 )}
 
                 {expanded && !isChecklist && (
-                    <div
-                        ref={contentRef}
-                        contentEditable
-                        onInput={(e) => setContent(e.currentTarget.innerHTML)}
-                        onKeyUp={updateActiveFormats}
-                        onMouseUp={updateActiveFormats}
-                        onFocus={updateActiveFormats}
-                        data-placeholder="Take a note..."
-                        className="w-full outline-none text-sm min-h-[60px] empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500"
-                        autoFocus
-                    />
+                        <div
+                            ref={contentRef}
+                            contentEditable
+                            onInput={(e) => setContent(e.currentTarget.innerHTML)}
+                            onPaste={(e) => {
+                                e.preventDefault();
+                                const text = e.clipboardData.getData('text/plain');
+                                document.execCommand('insertText', false, text);
+                            }}
+                            onKeyUp={updateActiveFormats}
+                            onMouseUp={updateActiveFormats}
+                            onFocus={updateActiveFormats}
+                            data-placeholder="Take a note..."
+                            className="w-full outline-none text-sm min-h-[60px] empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500"
+                            autoFocus
+                        />
                 )}
 
                 {isChecklist && (
@@ -320,7 +330,7 @@ export default function Notes() {
                     <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Pinned</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
                         {pinned.map((note) => (
-                            <NoteCard key={note.id} note={note} cardColor={cardColor} togglePin={togglePin} setColor={setNoteColor} archiveNote={archiveNote} deleteNote={deleteNote} />
+                            <NoteCard key={note.id} note={note} cardColor={cardColor} togglePin={togglePin} setColor={setNoteColor} archiveNote={archiveNote} deleteNote={deleteNote} onView={setViewingNote} />
                         ))}
                     </div>
                 </>
@@ -329,7 +339,7 @@ export default function Notes() {
             {others.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {others.map((note) => (
-                        <NoteCard key={note.id} note={note} cardColor={cardColor} togglePin={togglePin} setColor={setNoteColor} archiveNote={archiveNote} deleteNote={deleteNote} />
+                        <NoteCard key={note.id} note={note} cardColor={cardColor} togglePin={togglePin} setColor={setNoteColor} archiveNote={archiveNote} deleteNote={deleteNote} onView={setViewingNote} />
                     ))}
                 </div>
             )}
@@ -358,16 +368,27 @@ export default function Notes() {
                 </div>
             )}
         </main>
+            <NoteModal
+                note={viewingNote}
+                onClose={() => setViewingNote(null)}
+                onUpdated={() => loadNotes()}
+                onArchived={() => loadNotes()}
+                onDeleted={() => loadNotes()}
+            />
+        </>
     );
 }
 
-function NoteCard({ note, cardColor, togglePin, setColor, archiveNote, deleteNote }) {
+function NoteCard({ note, cardColor, togglePin, setColor, archiveNote, deleteNote, onView }) {
     return (
-        <div className={`group border rounded-xl p-4 transition-colors ${cardColor(note.color)}`}>
+        <div
+            onClick={() => onView(note)}
+            className={`group border rounded-xl p-4 transition-colors cursor-pointer ${cardColor(note.color)}`}
+        >
             <div className="flex justify-between items-start gap-2">
                 <h3 className="font-medium text-sm flex-1">{note.title}</h3>
                 <button
-                    onClick={() => togglePin(note)}
+                    onClick={(e) => { e.stopPropagation(); togglePin(note); }}
                     className={`text-xs opacity-0 group-hover:opacity-100 transition-opacity ${note.is_pinned ? '!opacity-100 text-diwa-indigo-light' : 'text-gray-500 hover:text-white'}`}
                 >
                     {note.is_pinned ? '★' : '☆'}
@@ -375,10 +396,10 @@ function NoteCard({ note, cardColor, togglePin, setColor, archiveNote, deleteNot
             </div>
 
             {note.is_checklist ? (
-                <NoteChecklist noteId={note.id} />
+                <p className="text-gray-400 text-sm mt-1">Checklist</p>
             ) : (
                 <div
-                    className="text-gray-400 text-sm mt-1 [&_b]:text-gray-200 [&_i]:text-gray-300"
+                    className="text-gray-400 text-sm mt-1 line-clamp-3 [&_b]:text-gray-200 [&_i]:text-gray-300"
                     dangerouslySetInnerHTML={{ __html: note.content }}
                 />
             )}
@@ -387,7 +408,7 @@ function NoteCard({ note, cardColor, togglePin, setColor, archiveNote, deleteNot
                 {new Date(note.updated_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </p>
 
-            <div className="flex justify-between items-center mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex justify-between items-center mt-3 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <div className="flex gap-1.5">
                     {COLOR_OPTIONS.map((opt) => (
                         <button key={opt.key} onClick={() => setColor(note, opt.key)} className={`w-4 h-4 rounded-full ${opt.className}`} />

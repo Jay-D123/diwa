@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Notes from './pages/Notes';
+import Archive from './pages/Archive';
+import Trash from './pages/Trash';
 import Layout from './components/Layout';
 
 function AppRoutes() {
     const { user, loading } = useAuth();
+    const [search, setSearch] = useState('');
 
     if (loading) {
         return (
@@ -20,9 +24,11 @@ function AppRoutes() {
     }
 
     return (
-        <Layout>
+        <Layout search={search} onSearchChange={setSearch}>
             <Routes>
-                <Route path="/" element={<Notes />} />
+                <Route path="/" element={<Notes search={search} />} />
+                <Route path="/archive" element={<Archive search={search} />} />
+                <Route path="/trash" element={<Trash search={search} />} />
             </Routes>
         </Layout>
     );

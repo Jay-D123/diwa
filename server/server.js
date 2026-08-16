@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('./passport');
+const linkPreviewRoutes = require('./routes/linkPreview');
 require('dotenv').config();
 
 const pool = require('./db');
@@ -26,6 +27,8 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.use('/api/link-preview', linkPreviewRoutes);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Diwa server is running' });
