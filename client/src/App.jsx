@@ -1,9 +1,34 @@
-function App() {
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';
+import Notes from './pages/Notes';
+
+function AppRoutes() {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-diwa-black flex items-center justify-center text-white">
+                Loading...
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-diwa-black text-white flex items-center justify-center">
-            <h1 className="text-3xl font-bold text-diwa-purple">Diwa</h1>
-        </div>
-    )
+        <Routes>
+            <Route path="/" element={user ? <Notes /> : <Login />} />
+        </Routes>
+    );
 }
 
-export default App
+function App() {
+    return (
+        <BrowserRouter>
+            <AuthProvider>
+                <AppRoutes />
+            </AuthProvider>
+        </BrowserRouter>
+    );
+}
+
+export default App;

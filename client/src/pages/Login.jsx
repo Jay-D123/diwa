@@ -1,0 +1,23 @@
+export default function Login() {
+    const handleGoogleLogin = () => {
+        window.location.href = 'http://localhost:5000/auth/google';
+    };
+
+    return (
+        <div className="min-h-screen bg-diwa-black flex items-center justify-center px-4">
+            <div className="bg-diwa-dark border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center">
+                <h1 className="text-4xl font-bold mb-2">
+                    <span className="text-diwa-purple-light">Di</span>
+                    <span className="text-diwa-indigo-light">wa</span>
+                </h1>
+                <p className="text-gray-400 mb-8">Notes, tasks, and reviewers — all in one place.</p>
+                <button
+                    onClick={handleGoogleLogin}
+                    className="w-full bg-diwa-indigo hover:bg-diwa-purple text-white font-medium py-3 rounded-lg transition-colors"
+                >
+                    Continue with Google
+                </button>
+            </div>
+        </div>
+    );
+}
