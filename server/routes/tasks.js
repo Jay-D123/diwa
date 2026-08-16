@@ -3,11 +3,11 @@ const router = express.Router();
 const pool = require('../db');
 const ensureAuthenticated = require('../middleware/auth');
 
-// Get all notes for logged-in user
+// Get all tasks for logged-in user
 router.get('/', ensureAuthenticated, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT * FROM notes WHERE user_id = $1 ORDER BY is_pinned DESC, updated_at DESC',
+            'SELECT * FROM tasks WHERE user_id = $1 ORDER BY is_completed ASC, created_at DESC',
             [req.user.id]
         );
         res.json(result.rows);
@@ -16,13 +16,13 @@ router.get('/', ensureAuthenticated, async (req, res) => {
     }
 });
 
-// Create a note
+// Create a task
 router.post('/', ensureAuthenticated, async (req, res) => {
     try {
-        const { title, content, color, is_checklist, is_archived, is_pinned } = req.body;
+        const { title, note_id } = req.body;
         const result = await pool.query(
-            'INSERT INTO notes (user_id, title, content, color, is_checklist, is_archived, is_pinned) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [req.user.id, title, content, color || 'default', is_checklist || false, is_archived || false, is_pinned || false]
+            'INSERT INTO tasks (user_id, note_id, title) VALUES ($1, $2, $3) RETURNING *',
+            [req.user.id, note_id || null, title]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -30,17 +30,29 @@ router.post('/', ensureAuthenticated, async (req, res) => {
     }
 });
 
-// Update a note
+// Get tasks for a specific note
+router.get('/by-note/:noteId', ensureAuthenticated, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM tasks WHERE note_id = $1 AND user_id = $2 ORDER BY created_at ASC',
+            [req.params.noteId, req.user.id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle / update a task
 router.put('/:id', ensureAuthenticated, async (req, res) => {
     try {
-        const { title, content, color, is_pinned, is_archived, is_checklist } = req.body;
+        const { title, is_completed } = req.body;
         const result = await pool.query(
-            `UPDATE notes SET title = $1, content = $2, color = $3, is_pinned = $4, is_archived = $5, is_checklist = $6, updated_at = NOW()
-       WHERE id = $7 AND user_id = $8 RETURNING *`,
-            [title, content, color, is_pinned, is_archived, is_checklist, req.params.id, req.user.id]
+            'UPDATE tasks SET title = $1, is_completed = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+            [title, is_completed, req.params.id, req.user.id]
         );
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Note not found' });
+            return res.status(404).json({ error: 'Task not found' });
         }
         res.json(result.rows[0]);
     } catch (err) {
@@ -48,17 +60,17 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
     }
 });
 
-// Delete a note
+// Delete a task
 router.delete('/:id', ensureAuthenticated, async (req, res) => {
     try {
         const result = await pool.query(
-            'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING *',
+            'DELETE FROM tasks WHERE id = $1 AND user_id = $2 RETURNING *',
             [req.params.id, req.user.id]
         );
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Note not found' });
+            return res.status(404).json({ error: 'Task not found' });
         }
-        res.json({ message: 'Note deleted' });
+        res.json({ message: 'Task deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

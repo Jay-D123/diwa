@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Notes from './pages/Notes';
+import Layout from './components/Layout';
 
 function AppRoutes() {
     const { user, loading } = useAuth();
@@ -14,10 +15,16 @@ function AppRoutes() {
         );
     }
 
+    if (!user) {
+        return <Login />;
+    }
+
     return (
-        <Routes>
-            <Route path="/" element={user ? <Notes /> : <Login />} />
-        </Routes>
+        <Layout>
+            <Routes>
+                <Route path="/" element={<Notes />} />
+            </Routes>
+        </Layout>
     );
 }
 

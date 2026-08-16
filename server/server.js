@@ -1,4 +1,5 @@
 const notesRoutes = require('./routes/notes');
+const tasksRoutes = require('./routes/tasks');
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -66,6 +67,8 @@ app.get('/auth/me', (req, res) => {
 });
 
 app.use('/api/notes', notesRoutes);
+
+app.use('/api/tasks', tasksRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
