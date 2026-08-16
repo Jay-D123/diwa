@@ -3,6 +3,8 @@ import NoteChecklist from '../components/NoteChecklist';
 import DOMPurify from 'dompurify';
 import NoteModal from '../components/NoteModal';
 import { apiFetch, linkify } from '../api';
+import LabelPicker from '../components/LabelPicker';
+import LabelChips from '../components/LabelChips';
 
 const COLOR_OPTIONS = [
     { key: 'default', className: 'bg-diwa-card border border-white/30' },
@@ -24,6 +26,7 @@ export default function Notes({ search }) {
     const contentRef = useRef(null);
     const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, align: 'left' });
     const [notePinned, setNotePinned] = useState(false);
+    const [labelIds, setLabelIds] = useState([]);
     const [page, setPage] = useState(1);
     const PER_PAGE = 8;
     const [viewingNote, setViewingNote] = useState(null);
@@ -60,6 +63,7 @@ export default function Notes({ search }) {
                 is_checklist: isChecklist,
                 is_archived: archive,
                 is_pinned: notePinned,
+                label_ids: labelIds,
             }),
         });
         if (isChecklist) {
@@ -84,6 +88,7 @@ export default function Notes({ search }) {
         setColor('default');
         setShowColorPicker(false);
         setNotePinned(false);
+        setLabelIds([]);
         if (contentRef.current) contentRef.current.innerHTML = '';
     }
 
@@ -298,10 +303,11 @@ export default function Notes({ search }) {
                             <button type="button" title="Remind me (coming soon)" className="text-gray-600 cursor-not-allowed">
                                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 0 1 8 0c0 3 1.2 4 1.2 4H2.8S4 9 4 6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" /></svg>
                             </button>
-                            <button type="button" title="Add image (coming soon)" className="text-gray-600 cursor-not-allowed">
-                                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><circle cx="5.5" cy="6" r="1" fill="currentColor" /><path d="M14 10.5 10.5 7l-6.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
-                            </button>
-                            <button type="button" title="Archive" onClick={() => saveNote(true)} className="text-gray-400 hover:text-white">
+                                <button type="button" title="Add image (coming soon)" className="text-gray-600 cursor-not-allowed">
+                                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><circle cx="5.5" cy="6" r="1" fill="currentColor" /><path d="M14 10.5 10.5 7l-6.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
+                                </button>
+                                <LabelPicker selectedIds={labelIds} onChange={setLabelIds} onLabelsChanged={loadNotes} />
+                                <button type="button" title="Archive" onClick={() => saveNote(true)} className="text-gray-400 hover:text-white">
                                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.3" /><path d="M2.5 5.5v7a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-7" stroke="currentColor" strokeWidth="1.3" /><path d="M6.5 8.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
                             </button>
                         </div>
@@ -403,6 +409,8 @@ function NoteCard({ note, cardColor, togglePin, setColor, archiveNote, deleteNot
                     dangerouslySetInnerHTML={{ __html: note.content }}
                 />
             )}
+
+            <LabelChips labels={note.labels} />
 
             <p className="text-xs text-gray-600 mt-2">
                 {new Date(note.updated_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}

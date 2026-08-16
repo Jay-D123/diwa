@@ -71,6 +71,8 @@ app.get('/auth/me', (req, res) => {
 
 app.use('/api/notes', notesRoutes);
 
+app.use('/api/labels', require('./routes/labels'));
+
 app.use('/api/tasks', tasksRoutes);
 
 app.listen(PORT, () => {

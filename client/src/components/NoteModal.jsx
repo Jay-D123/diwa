@@ -3,6 +3,8 @@ import DOMPurify from 'dompurify';
 import NoteChecklist from './NoteChecklist';
 import { LinkPreviewList } from './LinkPreview';
 import { apiFetch, linkify } from '../api';
+import LabelPicker from './LabelPicker';
+import LabelChips from './LabelChips';
 
 const COLOR_OPTIONS = [
     { key: 'default', className: 'bg-diwa-card border border-white/30' },
@@ -28,11 +30,13 @@ export default function NoteModal({
 }) {
     const [title, setTitle] = useState('');
     const [showColorPicker, setShowColorPicker] = useState(false);
+    const [labelIds, setLabelIds] = useState([]);
     const contentRef = useRef(null);
 
     useEffect(() => {
         if (note) {
             setTitle(note.title || '');
+            setLabelIds((note.labels || []).map((l) => l.id));
             if (contentRef.current) contentRef.current.innerHTML = note.content || '';
         }
     }, [note?.id]);
@@ -43,7 +47,7 @@ export default function NoteModal({
         const finalContent = contentRef.current ? linkify(DOMPurify.sanitize(contentRef.current.innerHTML)) : note.content;
         const updated = await apiFetch(`/api/notes/${note.id}`, {
             method: 'PUT',
-            body: JSON.stringify({ ...note, title, content: finalContent, ...extra }),
+            body: JSON.stringify({ ...note, title, content: finalContent, label_ids: labelIds, ...extra }),
         });
         onUpdated && onUpdated(updated);
         return updated;
@@ -57,6 +61,16 @@ export default function NoteModal({
     async function handleColorChange(c) {
         await saveChanges({ color: c });
         setShowColorPicker(false);
+    }
+
+    async function removeLabel(labelId) {
+        const nextIds = labelIds.filter((id) => id !== labelId);
+        setLabelIds(nextIds);
+        await apiFetch(`/api/notes/${note.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ ...note, title, content: note.content, label_ids: nextIds }),
+        });
+        onUpdated && onUpdated();
     }
 
     async function handleArchive() {
@@ -124,6 +138,7 @@ export default function NoteModal({
                         Edited {new Date(note.updated_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </p>
 
+                    <LabelChips labels={note.labels} onRemove={removeLabel} />
                     <LinkPreviewList content={note.content} />
                 </div>
 
@@ -173,6 +188,7 @@ export default function NoteModal({
                         <button type="button" title="Add image (coming soon)" className="text-gray-600 cursor-not-allowed shrink-0">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><circle cx="5.5" cy="6" r="1" fill="currentColor" /><path d="M14 10.5 10.5 7l-6.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                         </button>
+                        <LabelPicker selectedIds={labelIds} onChange={setLabelIds} onLabelsChanged={onUpdated} />
 
                         {variant === 'trash' ? (
                             <button type="button" title="Restore" onClick={handleRestore} className="hover:text-white shrink-0">
