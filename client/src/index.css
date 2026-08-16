@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+@theme {
+    --color-diwa-black: #0d0d0f;
+    --color-diwa-dark: #1a1a1e;
+    --color-diwa-purple: #8b5cf6;
+    --color-diwa-purple-light: #a78bfa;
+    --color-diwa-purple-dark: #6d28d9;
+}
