@@ -17,7 +17,7 @@ router.get('/', ensureAuthenticated, async (req, res) => {
         const result = await pool.query(
             `SELECT n.*, ${LABELS_SUBQUERY} FROM notes n
              WHERE n.user_id = $1 AND n.is_deleted = FALSE
-             ORDER BY n.is_pinned DESC, n.updated_at DESC`,
+             ORDER BY n.is_pinned DESC, n.sort_order ASC NULLS LAST, n.updated_at DESC`,
             [req.user.id]
         );
         res.json(result.rows);
@@ -55,6 +55,32 @@ router.get('/trash', ensureAuthenticated, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// Reorder notes (pinned or non-pinned group)
+router.put('/reorder', ensureAuthenticated, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { ordered_ids } = req.body;
+        if (!Array.isArray(ordered_ids)) {
+            return res.status(400).json({ error: 'ordered_ids must be an array' });
+        }
+        await client.query('BEGIN');
+        for (let i = 0; i < ordered_ids.length; i++) {
+            await client.query(
+                'UPDATE notes SET sort_order = $1 WHERE id = $2 AND user_id = $3',
+                [i, ordered_ids[i], req.user.id]
+            );
+        }
+        await client.query('COMMIT');
+        res.json({ message: 'Order updated' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 
 // Create a note
 router.post('/', ensureAuthenticated, async (req, res) => {
@@ -181,5 +207,6 @@ router.delete('/:id/permanent', ensureAuthenticated, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 module.exports = router;
