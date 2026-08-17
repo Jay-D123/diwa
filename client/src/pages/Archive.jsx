@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import NoteModal from '../components/NoteModal';
+import LabelChips from '../components/LabelChips';
 
 const COLOR_OPTIONS = [
     { key: 'default', className: 'bg-diwa-card border border-white/30' },
@@ -8,7 +9,7 @@ const COLOR_OPTIONS = [
     { key: 'indigo', className: 'bg-diwa-indigo' },
 ];
 
-export default function Archive({ search }) {
+export default function Archive({ search, labelFilter }) {
     const [notes, setNotes] = useState([]);
     const [viewingNote, setViewingNote] = useState(null);
 
@@ -40,9 +41,9 @@ export default function Archive({ search }) {
         return 'bg-diwa-card border-white/5';
     };
 
-    const filtered = notes.filter(
-        (n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = notes
+        .filter((n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase()))
+        .filter((n) => !labelFilter || labelFilter.length === 0 || (n.labels || []).some((l) => labelFilter.includes(l.id)));
 
     return (
         <>
@@ -63,6 +64,7 @@ export default function Archive({ search }) {
                                 className="text-gray-400 text-sm mt-1 line-clamp-3 [&_b]:text-gray-200 [&_i]:text-gray-300"
                                 dangerouslySetInnerHTML={{ __html: note.content }}
                             />
+                            <LabelChips labels={note.labels} />
                             <p className="text-xs text-gray-600 mt-2">
                                 {new Date(note.updated_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                             </p>

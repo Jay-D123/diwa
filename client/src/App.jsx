@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 function AppRoutes() {
     const { user, loading } = useAuth();
     const [search, setSearch] = useState('');
+    const [labelFilter, setLabelFilter] = useState([]);
 
     if (loading) {
         return (
@@ -18,17 +19,15 @@ function AppRoutes() {
             </div>
         );
     }
-
     if (!user) {
         return <Login />;
     }
-
     return (
-        <Layout search={search} onSearchChange={setSearch}>
+        <Layout search={search} onSearchChange={setSearch} labelFilter={labelFilter} onLabelFilterChange={setLabelFilter}>
             <Routes>
-                <Route path="/" element={<Notes search={search} />} />
-                <Route path="/archive" element={<Archive search={search} />} />
-                <Route path="/trash" element={<Trash search={search} />} />
+                <Route path="/" element={<Notes search={search} labelFilter={labelFilter} />} />
+                <Route path="/archive" element={<Archive search={search} labelFilter={labelFilter} />} />
+                <Route path="/trash" element={<Trash search={search} labelFilter={labelFilter} />} />
             </Routes>
         </Layout>
     );

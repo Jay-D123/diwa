@@ -12,7 +12,7 @@ const COLOR_OPTIONS = [
     { key: 'indigo', className: 'bg-diwa-indigo' },
 ];
 
-export default function Notes({ search }) {
+export default function Notes({ search, labelFilter }) {
     const [notes, setNotes] = useState([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -141,7 +141,8 @@ export default function Notes({ search }) {
 
     const visibleNotes = notes
         .filter((n) => !n.is_archived)
-        .filter((n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase()));
+        .filter((n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase()))
+        .filter((n) => !labelFilter || labelFilter.length === 0 || (n.labels || []).some((l) => labelFilter.includes(l.id)));
     const pinned = visibleNotes.filter((n) => n.is_pinned);
     const othersAll = visibleNotes.filter((n) => !n.is_pinned);
     const totalPages = Math.max(1, Math.ceil(othersAll.length / PER_PAGE));

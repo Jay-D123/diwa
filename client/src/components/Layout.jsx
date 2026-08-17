@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import LabelFilterDropdown from './LabelFilterDropdown';
 
 const NAV_ITEMS = [
     { path: '/', label: 'Notes', icon: 'M2 3.5h12M2 8h8M2 12.5h12' },
@@ -22,7 +23,7 @@ function NavIcon({ type }) {
     return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d={type} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>;
 }
 
-export default function Layout({ children, search, onSearchChange }) {
+export default function Layout({ children, search, onSearchChange, labelFilter, onLabelFilterChange }) {
     const { user, setUser } = useAuth();
     const location = useLocation();
     const [drawerOpen, setDrawerOpen] = useState(true);
@@ -47,7 +48,7 @@ export default function Layout({ children, search, onSearchChange }) {
                     </h1>
                 </div>
 
-                <div className="flex-1 flex justify-center px-4">
+                <div className="flex-1 flex items-center justify-center gap-2 px-4">
                     <input
                         type="text"
                         placeholder="Search notes..."
@@ -55,6 +56,7 @@ export default function Layout({ children, search, onSearchChange }) {
                         onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
                         className="w-full max-w-xl bg-diwa-dark border border-white/10 rounded-full px-4 py-1.5 text-sm outline-none placeholder-gray-500 focus:border-diwa-indigo transition-colors"
                     />
+                    <LabelFilterDropdown selectedIds={labelFilter || []} onChange={onLabelFilterChange} />
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">

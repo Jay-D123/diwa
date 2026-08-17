@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import NoteModal from '../components/NoteModal';
+import LabelChips from '../components/LabelChips';
 
-export default function Trash({ search }) {
+export default function Trash({ search, labelFilter }) {
     const [notes, setNotes] = useState([]);
     const [viewingNote, setViewingNote] = useState(null);
 
@@ -32,9 +33,11 @@ export default function Trash({ search }) {
         return Math.max(0, diff);
     }
 
-    const filtered = notes.filter(
-        (n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase())
-    );
+
+
+    const filtered = notes
+        .filter((n) => !search || n.title?.toLowerCase().includes(search.toLowerCase()) || n.content?.toLowerCase().includes(search.toLowerCase()))
+        .filter((n) => !labelFilter || labelFilter.length === 0 || (n.labels || []).some((l) => labelFilter.includes(l.id)));
 
     return (
         <>
@@ -53,9 +56,10 @@ export default function Trash({ search }) {
                         >
                             <h3 className="font-medium text-sm text-gray-400">{note.title}</h3>
                             <div
-                                className="text-gray-500 text-sm mt-1 line-clamp-3 [&_b]:text-gray-400 [&_i]:text-gray-400"
+                                className="text-gray-400 text-sm mt-1 line-clamp-3 [&_b]:text-gray-300 [&_i]:text-gray-300"
                                 dangerouslySetInnerHTML={{ __html: note.content }}
                             />
+                            <LabelChips labels={note.labels} />
                             <p className="text-xs text-gray-600 mt-2">{daysLeft(note.deleted_at)} days left</p>
                             <div
                                 className="flex justify-end gap-3 mt-3 opacity-0 group-hover:opacity-100 transition-opacity"
