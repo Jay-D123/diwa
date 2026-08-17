@@ -6,6 +6,7 @@ import Notes from './pages/Notes';
 import Archive from './pages/Archive';
 import Trash from './pages/Trash';
 import Layout from './components/Layout';
+import Search from './pages/Search';
 
 function AppRoutes() {
     const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ function AppRoutes() {
                 <Route path="/" element={<Notes search={search} labelFilter={labelFilter} />} />
                 <Route path="/archive" element={<Archive search={search} labelFilter={labelFilter} />} />
                 <Route path="/trash" element={<Trash search={search} labelFilter={labelFilter} />} />
+                <Route path="/search" element={<Search />} />
             </Routes>
         </Layout>
     );

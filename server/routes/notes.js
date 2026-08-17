@@ -56,6 +56,34 @@ router.get('/trash', ensureAuthenticated, async (req, res) => {
     }
 });
 
+// Search across active, archived, and trashed notes
+// IMPORTANT: must be defined before PUT/GET '/:id'-style routes.
+router.get('/search', ensureAuthenticated, async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim();
+        if (!q) {
+            return res.json([]);
+        }
+        const result = await pool.query(
+            `SELECT n.*, ${LABELS_SUBQUERY},
+                CASE
+                    WHEN n.is_deleted THEN 'trash'
+                    WHEN n.is_archived THEN 'archived'
+                    ELSE 'active'
+                END AS status
+             FROM notes n
+             WHERE n.user_id = $1
+               AND (n.title ILIKE $2 OR n.content ILIKE $2)
+             ORDER BY n.updated_at DESC
+             LIMIT 50`,
+            [req.user.id, `%${q}%`]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Reorder notes (pinned or non-pinned group)
 router.put('/reorder', ensureAuthenticated, async (req, res) => {
     const client = await pool.connect();

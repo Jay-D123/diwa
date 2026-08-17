@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LabelFilterDropdown from './LabelFilterDropdown';
 
@@ -26,6 +26,7 @@ function NavIcon({ type }) {
 export default function Layout({ children, search, onSearchChange, labelFilter, onLabelFilterChange }) {
     const { user, setUser } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(true);
 
     async function handleLogout() {
@@ -51,9 +52,14 @@ export default function Layout({ children, search, onSearchChange, labelFilter, 
                 <div className="flex-1 flex items-center justify-center gap-2 px-4">
                     <input
                         type="text"
-                        placeholder="Search notes..."
+                        placeholder="Search notes... (Enter to search everywhere)"
                         value={search || ''}
                         onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && search && search.trim()) {
+                                navigate(`/search?q=${encodeURIComponent(search.trim())}`);
+                            }
+                        }}
                         className="w-full max-w-xl bg-diwa-dark border border-white/10 rounded-full px-4 py-1.5 text-sm outline-none placeholder-gray-500 focus:border-diwa-indigo transition-colors"
                     />
                     <LabelFilterDropdown selectedIds={labelFilter || []} onChange={onLabelFilterChange} />
