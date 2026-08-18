@@ -58,7 +58,7 @@ export default function NoteChecklist({ noteId }) {
                         onClick={() => deleteItem(item.id)}
                         className="text-xs text-gray-600 hover:text-red-400 opacity-0 group-hover/item:opacity-100"
                     >
-                        ×
+                        Ã—
                     </button>
                 </div>
             ))}

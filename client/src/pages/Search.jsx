@@ -46,7 +46,7 @@ export default function Search() {
                     Search results for "{q}"
                 </h2>
                 <p className="text-xs text-gray-500 mb-6">
-                    {loading ? 'Searching…' : `${results.length} result${results.length === 1 ? '' : 's'}`}
+                    {loading ? 'Searchingâ€¦' : `${results.length} result${results.length === 1 ? '' : 's'}`}
                 </p>
 
                 {!loading && results.length === 0 && (

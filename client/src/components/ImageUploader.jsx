@@ -86,7 +86,7 @@ const ImageUploader = forwardRef(function ImageUploader({ noteId, imageUrls, onI
             />
 
             {error && <p className="text-xs text-red-400 mb-1">{error}</p>}
-            {uploading && <p className="text-xs text-gray-500 mb-1">Uploading…</p>}
+            {uploading && <p className="text-xs text-gray-500 mb-1">Uploadingâ€¦</p>}
         </div>
     );
 });

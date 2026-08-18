@@ -10,7 +10,7 @@ export default function Login() {
                     <span className="text-diwa-purple-light">Di</span>
                     <span className="text-diwa-indigo-light">wa</span>
                 </h1>
-                <p className="text-gray-400 mb-8">Notes, tasks, and reviewers — all in one place.</p>
+                <p className="text-gray-400 mb-8">Notes, tasks, and reviewers â€” all in one place.</p>
                 <button
                     onClick={handleGoogleLogin}
                     className="w-full bg-diwa-indigo hover:bg-diwa-purple text-white font-medium py-3 rounded-lg transition-colors"
