@@ -6,6 +6,7 @@ export default function Login() {
     return (
         <div className="min-h-screen bg-diwa-black flex items-center justify-center px-4">
             <div className="bg-diwa-dark border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center">
+                <img src="/diwa-icon.svg" alt="Diwa" className="w-14 h-14 mx-auto mb-4" />
                 <h1 className="text-4xl font-bold mb-2">
                     <span className="text-diwa-purple-light">Di</span>
                     <span className="text-diwa-indigo-light">wa</span>
