@@ -1,8 +1,8 @@
 export default function Login() {
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:5000/auth/google';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        window.location.href = `${apiUrl}/auth/google`;
     };
-
     return (
         <div className="min-h-screen bg-diwa-black flex items-center justify-center px-4">
             <div className="bg-diwa-dark border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center">

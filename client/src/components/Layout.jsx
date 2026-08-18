@@ -30,7 +30,8 @@ export default function Layout({ children, search, onSearchChange, labelFilter, 
     const [drawerOpen, setDrawerOpen] = useState(true);
 
     async function handleLogout() {
-        await fetch('http://localhost:5000/auth/logout', { credentials: 'include' });
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        await fetch(`${apiUrl}/auth/logout`, { credentials: 'include' });
         setUser(null);
     }
 
