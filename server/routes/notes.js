@@ -2,6 +2,19 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const ensureAuthenticated = require('../middleware/auth');
+const multer = require('multer');
+const supabase = require('../supabase');
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Only image files are allowed'));
+        }
+        cb(null, true);
+    },
+});
 
 const LABELS_SUBQUERY = `
   COALESCE(
@@ -84,6 +97,104 @@ router.get('/search', ensureAuthenticated, async (req, res) => {
     }
 });
 
+// Upload an image for a note
+router.post('/:id/images', ensureAuthenticated, (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: 'Image is too large. Maximum size is 5MB.' });
+            }
+            return res.status(400).json({ error: err.message });
+        } else if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No image file provided' });
+        }
+
+        // Verify the note belongs to this user, and check current image count
+        const noteResult = await pool.query(
+            'SELECT image_urls FROM notes WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.user.id]
+        );
+        if (noteResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+        const currentUrls = noteResult.rows[0].image_urls || [];
+        if (currentUrls.length >= 5) {
+            return res.status(400).json({ error: 'Maximum of 5 images per note' });
+        }
+
+        // Upload to Supabase Storage
+        const ext = req.file.originalname.split('.').pop();
+        const fileName = `${req.user.id}/${req.params.id}/${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('note-images')
+            .upload(fileName, req.file.buffer, {
+                contentType: req.file.mimetype,
+            });
+
+        if (uploadError) {
+            return res.status(500).json({ error: uploadError.message });
+        }
+
+        const { data: publicUrlData } = supabase.storage
+            .from('note-images')
+            .getPublicUrl(fileName);
+
+        const newUrls = [...currentUrls, publicUrlData.publicUrl];
+        const result = await pool.query(
+            'UPDATE notes SET image_urls = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *',
+            [newUrls, req.params.id, req.user.id]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Remove an image from a note
+router.delete('/:id/images', ensureAuthenticated, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) {
+            return res.status(400).json({ error: 'url is required' });
+        }
+
+        const noteResult = await pool.query(
+            'SELECT image_urls FROM notes WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.user.id]
+        );
+        if (noteResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const currentUrls = noteResult.rows[0].image_urls || [];
+        const newUrls = currentUrls.filter((u) => u !== url);
+
+        // Try to remove from Supabase Storage too (best-effort)
+        const pathMatch = url.match(/note-images\/(.+)$/);
+        if (pathMatch) {
+            await supabase.storage.from('note-images').remove([pathMatch[1]]);
+        }
+
+        const result = await pool.query(
+            'UPDATE notes SET image_urls = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *',
+            [newUrls, req.params.id, req.user.id]
+        );
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Reorder notes (pinned or non-pinned group)
 router.put('/reorder', ensureAuthenticated, async (req, res) => {
     const client = await pool.connect();
@@ -116,9 +227,17 @@ router.post('/', ensureAuthenticated, async (req, res) => {
     try {
         const { title, content, color, is_checklist, is_archived, is_pinned, label_ids } = req.body;
         await client.query('BEGIN');
+
+        // Put new notes at the front by assigning a sort_order lower than the current minimum
+        const minResult = await client.query(
+            'SELECT MIN(sort_order) AS min_order FROM notes WHERE user_id = $1',
+            [req.user.id]
+        );
+        const newSortOrder = (minResult.rows[0].min_order ?? 0) - 1;
+
         const result = await client.query(
-            'INSERT INTO notes (user_id, title, content, color, is_checklist, is_archived, is_pinned) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [req.user.id, title, content, color || 'default', is_checklist || false, is_archived || false, is_pinned || false]
+            'INSERT INTO notes (user_id, title, content, color, is_checklist, is_archived, is_pinned, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [req.user.id, title, content, color || 'default', is_checklist || false, is_archived || false, is_pinned || false, newSortOrder]
         );
         const note = result.rows[0];
 

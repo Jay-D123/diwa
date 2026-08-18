@@ -13,6 +13,20 @@ export async function apiFetch(endpoint, options = {}) {
     return res.json();
 }
 
+export async function uploadImage(noteId, file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`${API_URL}/api/notes/${noteId}/images`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+    });
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(error.error || 'Upload failed');
+    }
+    return res.json();
+}
 export function linkify(html) {
     const div = document.createElement('div');
     div.innerHTML = html;

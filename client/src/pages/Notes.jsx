@@ -2,10 +2,10 @@
 import NoteChecklist from '../components/NoteChecklist';
 import DOMPurify from 'dompurify';
 import NoteModal from '../components/NoteModal';
-import { apiFetch, linkify } from '../api';
 import LabelPicker from '../components/LabelPicker';
 import LabelChips from '../components/LabelChips';
 import SortableNoteCard from '../components/SortableNoteCard';
+import { apiFetch, linkify, uploadImage } from '../api';
 import {
     DndContext,
     closestCorners,
@@ -43,6 +43,11 @@ export default function Notes({ search, labelFilter }) {
     const [page, setPage] = useState(1);
     const PER_PAGE = 8;
     const [viewingNote, setViewingNote] = useState(null);
+    const [noteId, setNoteId] = useState(null);
+    const [imageUrls, setImageUrls] = useState([]);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [imageError, setImageError] = useState('');
+    const imageInputRef = useRef(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -70,19 +75,22 @@ export default function Notes({ search, labelFilter }) {
 
     async function saveNote(archive = false) {
         const finalContent = contentRef.current ? linkify(DOMPurify.sanitize(contentRef.current.innerHTML)) : '';
-        if (!title && !finalContent && checklistItems.length === 0) return;
-        const note = await apiFetch('/api/notes', {
-            method: 'POST',
-            body: JSON.stringify({
-                title,
-                content: isChecklist ? '' : finalContent,
-                color,
-                is_checklist: isChecklist,
-                is_archived: archive,
-                is_pinned: notePinned,
-                label_ids: labelIds,
-            }),
-        });
+        if (!title && !finalContent && checklistItems.length === 0 && imageUrls.length === 0) return;
+
+        const payload = {
+            title,
+            content: isChecklist ? '' : finalContent,
+            color,
+            is_checklist: isChecklist,
+            is_archived: archive,
+            is_pinned: notePinned,
+            label_ids: labelIds,
+        };
+
+        const note = noteId
+            ? await apiFetch(`/api/notes/${noteId}`, { method: 'PUT', body: JSON.stringify(payload) })
+            : await apiFetch('/api/notes', { method: 'POST', body: JSON.stringify(payload) });
+
         if (isChecklist) {
             for (const itemText of checklistItems) {
                 await apiFetch('/api/tasks', {
@@ -93,6 +101,75 @@ export default function Notes({ search, labelFilter }) {
         }
         resetForm();
         loadNotes();
+    }
+
+    async function ensureDraftNote() {
+        if (noteId) return noteId;
+        const finalContent = contentRef.current ? linkify(DOMPurify.sanitize(contentRef.current.innerHTML)) : '';
+        const note = await apiFetch('/api/notes', {
+            method: 'POST',
+            body: JSON.stringify({
+                title,
+                content: isChecklist ? '' : finalContent,
+                color,
+                is_checklist: isChecklist,
+                is_archived: false,
+                is_pinned: notePinned,
+                label_ids: labelIds,
+            }),
+        });
+        setNoteId(note.id);
+        return note.id;
+    }
+
+    async function handleImageButtonClick() {
+        if (imageUrls.length >= 5 || uploadingImage) return;
+        setImageError('');
+        await ensureDraftNote();
+        imageInputRef.current?.click();
+    }
+
+    async function handleImageFilesSelected(files) {
+        const remaining = 5 - imageUrls.length;
+        const toUpload = Array.from(files).slice(0, remaining);
+        setUploadingImage(true);
+        try {
+            let updated;
+            for (const file of toUpload) {
+                updated = await uploadImage(noteId, file);
+            }
+            if (updated) setImageUrls(updated.image_urls || []);
+        } catch (err) {
+            setImageError(err.message);
+        } finally {
+            setUploadingImage(false);
+        }
+    }
+
+    async function removeComposerImage(url) {
+        if (!noteId) return;
+        try {
+            const updated = await apiFetch(`/api/notes/${noteId}/images`, {
+                method: 'DELETE',
+                body: JSON.stringify({ url }),
+            });
+            setImageUrls(updated.image_urls || []);
+        } catch (err) {
+            setImageError(err.message);
+        }
+    }
+
+    async function cancelComposer() {
+        const finalContent = contentRef.current ? contentRef.current.innerHTML.trim() : '';
+        const isEmpty = !title && !finalContent && checklistItems.length === 0 && imageUrls.length === 0;
+        if (noteId && isEmpty) {
+            try {
+                await apiFetch(`/api/notes/${noteId}`, { method: 'DELETE' });
+            } catch {
+                // ignore; wala namang laman kaya di naman kritikal
+            }
+        }
+        resetForm();
     }
 
     function resetForm() {
@@ -106,6 +183,9 @@ export default function Notes({ search, labelFilter }) {
         setShowColorPicker(false);
         setNotePinned(false);
         setLabelIds([]);
+        setNoteId(null);
+        setImageUrls([]);
+        setImageError('');
         if (contentRef.current) contentRef.current.innerHTML = '';
     }
 
@@ -206,6 +286,25 @@ export default function Notes({ search, labelFilter }) {
         <>
             <main className="max-w-3xl mx-auto px-6 py-10">
                 <div className={`relative border rounded-xl px-4 py-3 mb-10 shadow-lg transition-colors ${cardColor(color)}`}>
+
+                    {expanded && imageUrls.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                            {imageUrls.map((url) => (
+                                <div key={url} className="relative group/img rounded-lg overflow-hidden bg-black/20">
+                                    <img src={url} alt="" className="w-full h-auto max-h-64 object-contain" />
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); removeComposerImage(url); }}
+                                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                    >
+                                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                                            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {expanded && (
                         <button
@@ -358,18 +457,36 @@ export default function Notes({ search, labelFilter }) {
                                 <button type="button" title="Remind me (coming soon)" className="text-gray-600 cursor-not-allowed">
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 0 1 8 0c0 3 1.2 4 1.2 4H2.8S4 9 4 6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" /></svg>
                                 </button>
-                                <button type="button" title="Add image (coming soon)" className="text-gray-600 cursor-not-allowed">
+                                <input
+                                    ref={imageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        if (e.target.files?.length) handleImageFilesSelected(e.target.files);
+                                        e.target.value = '';
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    title={uploadingImage ? 'Uploading…' : 'Add image'}
+                                    onClick={handleImageButtonClick}
+                                    disabled={uploadingImage || imageUrls.length >= 5}
+                                    className={`text-gray-400 hover:text-white transition-colors ${uploadingImage || imageUrls.length >= 5 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                >
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><circle cx="5.5" cy="6" r="1" fill="currentColor" /><path d="M14 10.5 10.5 7l-6.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                                 </button>
                                 <LabelPicker selectedIds={labelIds} onChange={setLabelIds} onLabelsChanged={loadNotes} />
                                 <button type="button" title="Archive" onClick={() => saveNote(true)} className="text-gray-400 hover:text-white">
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.3" /><path d="M2.5 5.5v7a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-7" stroke="currentColor" strokeWidth="1.3" /><path d="M6.5 8.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
                                 </button>
+                                {imageError && <p className="text-xs text-red-400 ml-2">{imageError}</p>}
                             </div>
                             <div className="flex gap-2">
                                 <button
                                     type="button"
-                                    onClick={resetForm}
+                                    onClick={cancelComposer}
                                     className="text-sm text-gray-400 hover:text-white px-3 py-1.5"
                                 >
                                     Cancel

@@ -5,6 +5,7 @@ import { LinkPreviewList } from './LinkPreview';
 import { apiFetch, linkify } from '../api';
 import LabelPicker from './LabelPicker';
 import LabelChips from './LabelChips';
+import ImageUploader from './ImageUploader';
 
 const COLOR_OPTIONS = [
     { key: 'default', className: 'bg-diwa-card border border-white/30' },
@@ -31,12 +32,16 @@ export default function NoteModal({
     const [title, setTitle] = useState('');
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [labelIds, setLabelIds] = useState([]);
+    const [imageUrls, setImageUrls] = useState([]);
     const contentRef = useRef(null);
+    const imageUploaderRef = useRef(null);
+    
 
     useEffect(() => {
         if (note) {
             setTitle(note.title || '');
             setLabelIds((note.labels || []).map((l) => l.id));
+            setImageUrls(note.image_urls || []);
             if (contentRef.current) contentRef.current.innerHTML = note.content || '';
         }
     }, [note?.id]);
@@ -61,6 +66,11 @@ export default function NoteModal({
     async function handleColorChange(c) {
         await saveChanges({ color: c });
         setShowColorPicker(false);
+    }
+
+    function handleImagesChanged(updatedNote) {
+        setImageUrls(updatedNote.image_urls || []);
+        onUpdated && onUpdated(updatedNote);
     }
 
     async function removeLabel(labelId) {
@@ -111,6 +121,8 @@ export default function NoteModal({
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex-1 overflow-y-auto p-6 pb-2">
+                    <ImageUploader ref={imageUploaderRef} noteId={note.id} imageUrls={imageUrls} onImagesChanged={handleImagesChanged} />
+
                     <input
                         type="text"
                         value={title}
@@ -185,7 +197,13 @@ export default function NoteModal({
                         <button type="button" title="Remind me (coming soon)" className="text-gray-600 cursor-not-allowed shrink-0">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 0 1 8 0c0 3 1.2 4 1.2 4H2.8S4 9 4 6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" /></svg>
                         </button>
-                        <button type="button" title="Add image (coming soon)" className="text-gray-600 cursor-not-allowed shrink-0">
+                        <button
+                            type="button"
+                            title={imageUrls.length >= 5 ? 'Maximum 5 images' : 'Add image'}
+                            onClick={() => imageUploaderRef.current?.openPicker()}
+                            disabled={imageUrls.length >= 5}
+                            className={`hover:text-white shrink-0 ${imageUrls.length >= 5 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        >
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><circle cx="5.5" cy="6" r="1" fill="currentColor" /><path d="M14 10.5 10.5 7l-6.5 6" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                         </button>
                         <LabelPicker selectedIds={labelIds} onChange={setLabelIds} onLabelsChanged={onUpdated} />
