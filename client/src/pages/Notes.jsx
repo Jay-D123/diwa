@@ -396,8 +396,8 @@ export default function Notes({ search, labelFilter }) {
                     )}
 
                     {expanded && (
-                        <div className="flex justify-between items-center mt-3 relative">
-                            <div className="flex items-center gap-3 text-gray-400">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-3 relative">
+                            <div className="flex items-center gap-2 sm:gap-3 text-gray-400 overflow-x-auto flex-nowrap pb-1 sm:pb-0 [&>*]:shrink-0">
                                 {!isChecklist && (
                                     <>
                                         <button type="button" title="Bold" onMouseDown={(e) => { e.preventDefault(); contentRef.current?.focus(); document.execCommand('bold'); updateActiveFormats(); }}
@@ -481,9 +481,9 @@ export default function Notes({ search, labelFilter }) {
                                 <button type="button" title="Archive" onClick={() => saveNote(true)} className="text-gray-400 hover:text-white">
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.3" /><path d="M2.5 5.5v7a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-7" stroke="currentColor" strokeWidth="1.3" /><path d="M6.5 8.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
                                 </button>
-                                {imageError && <p className="text-xs text-red-400 ml-2">{imageError}</p>}
+                                {imageError && <p className="text-xs text-red-400 ml-2 shrink-0">{imageError}</p>}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 justify-end shrink-0">
                                 <button
                                     type="button"
                                     onClick={cancelComposer}
