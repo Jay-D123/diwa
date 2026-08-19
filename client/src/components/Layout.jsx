@@ -63,7 +63,7 @@ export default function Layout({ children, search, onSearchChange, labelFilter, 
                         </h1>
                     </div>
 
-                    {/* Desktop/tablet search — hidden on small screens */}
+                    {/* Desktop/tablet search â€” hidden on small screens */}
                     <div className="flex-1 hidden sm:flex items-center justify-center gap-2 min-w-0">
                         <input
                             type="text"
@@ -97,7 +97,7 @@ export default function Layout({ children, search, onSearchChange, labelFilter, 
                     </div>
                 </div>
 
-                {/* Mobile search bar — slides in below header when toggled */}
+                {/* Mobile search bar â€” slides in below header when toggled */}
                 {mobileSearchOpen && (
                     <div className="sm:hidden flex items-center gap-2 px-3 pb-3">
                         <input
