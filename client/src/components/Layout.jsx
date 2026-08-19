@@ -6,11 +6,15 @@ import LabelFilterDropdown from './LabelFilterDropdown';
 const NAV_ITEMS = [
     { path: '/', label: 'Notes', icon: 'M2 3.5h12M2 8h8M2 12.5h12' },
     { path: '/reminders', label: 'Reminders', icon: 'bell' },
+    { path: '/calendar', label: 'Calendar', icon: 'calendar' },
     { path: '/archive', label: 'Archive', icon: 'archive' },
     { path: '/trash', label: 'Trash', icon: 'trash' },
 ];
 
 function NavIcon({ type }) {
+    if (type === 'calendar') {
+        return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><path d="M1.5 6h13M5 1.5v2M11 1.5v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>;
+    }
     if (type === 'bell') {
         return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 0 1 8 0c0 3 1.2 4 1.2 4H2.8S4 9 4 6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" /></svg>;
     }
