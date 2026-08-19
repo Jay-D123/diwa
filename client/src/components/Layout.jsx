@@ -48,7 +48,7 @@ export default function Layout({ children, search, onSearchChange, labelFilter, 
     }
 
     return (
-        <div className="min-h-screen bg-diwa-black text-white">
+        <div className="min-h-screen bg-diwa-black text-white overflow-x-hidden">
             <header className="border-b border-white/5">
                 <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 py-3">
                     <div className="flex items-center gap-2 sm:gap-4 shrink-0">
