@@ -1,3 +1,6 @@
+const holidaysRoutes = require('./routes/holidays');
+const remindersRoutes = require('./routes/reminders');
+const calendarEventsRoutes = require('./routes/calendarEvents');
 const notesRoutes = require('./routes/notes');
 const tasksRoutes = require('./routes/tasks');
 const express = require('express');
@@ -29,6 +32,10 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/api/link-preview', linkPreviewRoutes);
+app.use('/api/reminders', remindersRoutes);
+app.use('/api/calendar-events', calendarEventsRoutes);
+app.use('/api/holidays', holidaysRoutes);
+
 app.get('/', (req, res) => {
     res.json({ message: 'Diwa server is running' });
 });

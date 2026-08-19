@@ -34,7 +34,7 @@ export default function Notes({ search, labelFilter }) {
     const [checklistItems, setChecklistItems] = useState([]);
     const [newItemText, setNewItemText] = useState('');
     const [color, setColor] = useState('default');
-    const [showColorPicker, setShowColorPicker] = useState(false);
+    const [activePopover, setActivePopover] = useState(null); // 'color' | 'reminder' | null
     const newItemRef = useRef(null);
     const contentRef = useRef(null);
     const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false, align: 'left' });
@@ -48,6 +48,8 @@ export default function Notes({ search, labelFilter }) {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [imageError, setImageError] = useState('');
     const imageInputRef = useRef(null);
+    const [reminderAt, setReminderAt] = useState('');
+    const [reminderId, setReminderId] = useState(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -146,6 +148,33 @@ export default function Notes({ search, labelFilter }) {
         }
     }
 
+    async function setReminder() {
+        if (!reminderAt) return;
+        const id = await ensureDraftNote();
+        if (reminderId) {
+            await apiFetch(`/api/reminders/${reminderId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ remind_at: reminderAt }),
+            });
+        } else {
+            const r = await apiFetch('/api/reminders', {
+                method: 'POST',
+                body: JSON.stringify({ note_id: id, remind_at: reminderAt }),
+            });
+            setReminderId(r.id);
+        }
+        setActivePopover(null);
+    }
+
+    async function clearReminder() {
+        if (reminderId) {
+            await apiFetch(`/api/reminders/${reminderId}`, { method: 'DELETE' });
+        }
+        setReminderId(null);
+        setReminderAt('');
+        setActivePopover(null);
+    }
+
     async function removeComposerImage(url) {
         if (!noteId) return;
         try {
@@ -180,12 +209,15 @@ export default function Notes({ search, labelFilter }) {
         setChecklistItems([]);
         setNewItemText('');
         setColor('default');
-        setShowColorPicker(false);
+        setActivePopover(null);
         setNotePinned(false);
         setLabelIds([]);
         setNoteId(null);
         setImageUrls([]);
         setImageError('');
+        setReminderAt('');
+        setActivePopover(null);
+        setReminderId(null);
         if (contentRef.current) contentRef.current.innerHTML = '';
     }
 
@@ -441,20 +473,15 @@ export default function Notes({ search, labelFilter }) {
                                 <button type="button" title="New list" onClick={() => setIsChecklist(!isChecklist)} className={`text-gray-400 hover:text-white ${isChecklist ? 'text-diwa-indigo-light' : ''}`}>
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" /><path d="M8 3.5h6.5M1.5 10.5h4M8 10.5h6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /><rect x="1.5" y="9" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" /></svg>
                                 </button>
-                                <div className="relative">
-                                    <button type="button" title="Background color" onClick={() => setShowColorPicker(!showColorPicker)} className="text-gray-400 hover:text-white">
-                                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" /></svg>
-                                    </button>
-                                    {showColorPicker && (
-                                        <div className="absolute bottom-8 left-0 bg-diwa-card border border-white/10 rounded-lg p-2 flex gap-2 shadow-lg z-10">
-                                            {COLOR_OPTIONS.map((opt) => (
-                                                <button key={opt.key} type="button" onClick={() => { setColor(opt.key); setShowColorPicker(false); }}
-                                                    className={`w-5 h-5 rounded-full ${opt.className} ${color === opt.key ? 'ring-2 ring-white' : ''}`} />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <button type="button" title="Remind me (coming soon)" className="text-gray-600 cursor-not-allowed">
+                                <button type="button" title="Background color" onClick={() => setActivePopover(activePopover === 'color' ? null : 'color')} className="text-gray-400 hover:text-white">
+                                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" /></svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Remind me"
+                                    onClick={() => setActivePopover(activePopover === 'reminder' ? null : 'reminder')}
+                                    className={`hover:text-white transition-colors ${reminderId ? 'text-diwa-indigo-light' : 'text-gray-400'}`}
+                                >
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 0 1 8 0c0 3 1.2 4 1.2 4H2.8S4 9 4 6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" /></svg>
                                 </button>
                                 <input
@@ -483,6 +510,37 @@ export default function Notes({ search, labelFilter }) {
                                 </button>
                                 {imageError && <p className="text-xs text-red-400 ml-2 shrink-0">{imageError}</p>}
                             </div>
+
+                            {activePopover === 'color' && (
+                                <div className="bg-diwa-card border border-white/10 rounded-lg p-2 flex gap-2 shadow-lg w-fit">
+                                    {COLOR_OPTIONS.map((opt) => (
+                                        <button key={opt.key} type="button" onClick={() => { setColor(opt.key); setActivePopover(null); }}
+                                            className={`w-5 h-5 rounded-full ${opt.className} ${color === opt.key ? 'ring-2 ring-white' : ''}`} />
+                                    ))}
+                                </div>
+                            )}
+
+                            {activePopover === 'reminder' && (
+                                <div className="bg-diwa-card border border-white/10 rounded-lg p-3 shadow-lg w-56">
+                                    <input
+                                        type="datetime-local"
+                                        value={reminderAt}
+                                        onChange={(e) => setReminderAt(e.target.value)}
+                                        className="w-full bg-diwa-dark border border-white/10 rounded px-2 py-1 text-xs text-white outline-none mb-2"
+                                    />
+                                    <div className="flex justify-between gap-2">
+                                        {reminderId && (
+                                            <button type="button" onClick={clearReminder} className="text-xs text-red-400 hover:text-red-300">
+                                                Remove
+                                            </button>
+                                        )}
+                                        <button type="button" onClick={setReminder} className="text-xs bg-diwa-indigo hover:bg-diwa-purple px-3 py-1 rounded ml-auto">
+                                            Set
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex gap-2 justify-end shrink-0">
                                 <button
                                     type="button"

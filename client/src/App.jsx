@@ -7,6 +7,7 @@ import Archive from './pages/Archive';
 import Trash from './pages/Trash';
 import Layout from './components/Layout';
 import Search from './pages/Search';
+import Reminders from './pages/Reminders';
 
 function AppRoutes() {
     const { user, loading } = useAuth();
@@ -30,6 +31,7 @@ function AppRoutes() {
                 <Route path="/archive" element={<Archive search={search} labelFilter={labelFilter} />} />
                 <Route path="/trash" element={<Trash search={search} labelFilter={labelFilter} />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/reminders" element={<Reminders />} />
             </Routes>
         </Layout>
     );

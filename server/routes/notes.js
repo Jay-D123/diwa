@@ -39,6 +39,20 @@ router.get('/', ensureAuthenticated, async (req, res) => {
     }
 });
 
+// Get a single note by id (used by Reminders page to open the linked note)
+router.get('/:id', ensureAuthenticated, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM notes WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.user.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Note not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Get archived notes
 router.get('/archived', ensureAuthenticated, async (req, res) => {
     try {
